@@ -39,7 +39,7 @@ class InputWrapper(ObservationWrapper):
         new_obs = resize(observation, (IMAGE_SIZE, IMAGE_SIZE))
         # transform (210, 160, 3) -> (3, 210, 160)
         new_obs = np.moveaxis(new_obs, 2, 0)
-        return new_obs.astype(np.float32) / 255.0
+        return new_obs.astype(np.float32)
 
 
 class Discriminator(Module):
@@ -104,7 +104,6 @@ class Generator(Module):
 
 def iterate_batches(envs, batch_size=BATCH_SIZE):
     batch = [e.reset() for e in envs]
-
     while True:
         e = choice(envs)
         obs, reward, is_done, _ = e.step(e.action_space.sample())
@@ -136,8 +135,8 @@ if __name__ == "__main__":
     net_gener = Generator(output_shape=input_shape).to(device_)
 
     objective = BCELoss()
-    gen_optimizer = Adam(params=net_gener.parameters(), lr=LEARNING_RATE)
-    dis_optimizer = Adam(params=net_discr.parameters(), lr=LEARNING_RATE)
+    gen_optimizer = Adam(params=net_gener.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
+    dis_optimizer = Adam(params=net_discr.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
 
     gen_losses = []
     dis_losses = []
