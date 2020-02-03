@@ -1,14 +1,18 @@
-from numpy.random import default_rng
 from torch.nn import Module, Sequential, Linear, ReLU, CrossEntropyLoss, Softmax
-from torch import tensor, float32, long
+from torch import tensor, float32, long, device
+from torch.distributions.categorical import Categorical
+from torch.optim import Adam
+from torch.utils.tensorboard import SummaryWriter
+from gym import make
+from gym.wrappers import Monitor
 from collections import namedtuple
 import numpy as np
-
+import torch
 
 HIDDEN_SIZE = 128
 BATCH_SIZE = 16
 PERCENTILE = 70
-rng = default_rng()
+
 
 class Net(Module):
     def __init__(self, obs_size, hidden_size, n_actions):
@@ -36,34 +40,59 @@ def iterate_batches(env, net, batch_size):
     while True:
         obs_v = tensor([obs], dtype=float32)
         act_probs_v = sm(net(obs_v))
-        act_probs = act_probs_v.data.numpy()[0]
-        action = rng.choice(len(act_probs), p=act_probs)
+        action = Categorical(act_probs_v).sample().item()
         next_obs, reward, is_done, _ = env.step(action)
         episode_reward += reward
         episode_steps.append(EpisodeStep(obs, action))
         if is_done:
-            batch.append(Episode(episode_reward, episode_steps))
+            batch.append(Episode(episode_reward, episode_steps.copy()))
             episode_reward = 0.0
             episode_steps.clear()
+
             next_obs = env.reset()
             if len(batch) == batch_size:
                 yield batch
                 batch.clear()
+
         obs = next_obs
 
 
 def filter_batch(batch, percentile):
-    rewards = list(map(lambda s: s.reward, batch))
+    rewards = list(example.reward for example in batch)
     reward_bound = np.percentile(rewards, percentile)
     reward_mean = float(np.mean(rewards))
 
-    train_obs = []
-    train_act = []
+    train_obs, train_act = zip(*(step for example in batch for step in example.steps if example.reward >= reward_bound))
 
-    train_obs, train_act = zip(*(example for example in batch if example.reward < reward_bound))
-    train_obs_v = tensor(train_obs, dtype=long)
+    train_obs_v = tensor(train_obs, dtype=float32)
     train_act_v = tensor(train_act, dtype=long)
     return train_obs_v, train_act_v, reward_bound, reward_mean
 
 
 if __name__ == "__main__":
+    env = make("CartPole-v0")
+    #env = Monitor(env, directory="mon", force=True)
+    obs_size = env.observation_space.shape[0]
+    n_actions = env.action_space.n
+
+    net = Net(obs_size, HIDDEN_SIZE, n_actions)
+    objective = CrossEntropyLoss()
+    optimizer = Adam(params=net.parameters(), lr=0.01)
+
+    with SummaryWriter(comment="-cartpole") as writer:
+
+        for iter_no, batch in enumerate(iterate_batches(env, net, BATCH_SIZE)):
+            obs_v, acts_v, reward_b, reward_m = filter_batch(batch, PERCENTILE)
+            optimizer.zero_grad()
+            action_scores_v = net(obs_v)
+            loss_v = objective(action_scores_v, acts_v)
+            loss_v.backward()
+            optimizer.step()
+            print(f"{iter_no:d}: loss={loss_v.item():.3f}, reward_mean={reward_m:.1f}, reward_bound={reward_b:.1f}")
+            writer.add_scalar("loss", loss_v.item(), iter_no)
+            writer.add_scalar("reward_bound", reward_b, iter_no)
+            writer.add_scalar("reward_mean", reward_m, iter_no)
+            if reward_m > 199:
+                print("Solved!")
+                break
+
