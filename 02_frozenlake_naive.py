@@ -1,3 +1,5 @@
+from gym import ObservationWrapper
+from gym.spaces import Discrete, Box
 from torch.nn import Module, Sequential, Linear, ReLU, CrossEntropyLoss, Softmax
 from torch import tensor, float32, long
 from torch.distributions.categorical import Categorical
@@ -12,6 +14,18 @@ import numpy as np
 HIDDEN_SIZE = 128
 BATCH_SIZE = 16
 PERCENTILE = 70
+
+
+class DiscreteOneHotWrapper(ObservationWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        assert isinstance(env.observation_space, Discrete)
+        self.observation_space = Box(0.0, 1.0, (env.observation_space.n,), dtype=np.float32)
+
+    def observation(self, observation):
+        res = np.copy(self.observation_space.low)
+        res[observation] = 1.0
+        return res
 
 
 class Net(Module):
@@ -70,7 +84,7 @@ def filter_batch(batch, percentile):
 
 
 if __name__ == "__main__":
-    env = make("CartPole-v0")
+    env = DiscreteOneHotWrapper(make("FrozenLake-v0"))
     #env = Monitor(env, directory="mon", force=True)
     obs_size = env.observation_space.shape[0]
     n_actions = env.action_space.n
@@ -79,7 +93,7 @@ if __name__ == "__main__":
     objective = CrossEntropyLoss()
     optimizer = Adam(params=net.parameters(), lr=0.01)
 
-    with SummaryWriter(comment="-cartpole") as writer:
+    with SummaryWriter(comment="-frozenlake-naive") as writer:
 
         for iter_no, batch in enumerate(iterate_batches(env, net, BATCH_SIZE)):
             obs_v, acts_v, reward_b, reward_m = filter_batch(batch, PERCENTILE)
@@ -92,8 +106,7 @@ if __name__ == "__main__":
             writer.add_scalar("loss", loss_v.item(), iter_no)
             writer.add_scalar("reward_bound", reward_b, iter_no)
             writer.add_scalar("reward_mean", reward_m, iter_no)
-            if reward_m > 199:
+            if reward_m > 0.8:
                 print("Solved!")
                 break
-
 
