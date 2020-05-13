@@ -2,8 +2,9 @@ from collections import namedtuple
 
 import numpy as np
 from gym import ObservationWrapper
-from gym import make
+from gym.envs.toy_text.frozen_lake import FrozenLakeEnv
 from gym.spaces import Discrete, Box
+from gym.wrappers import TimeLimit
 from torch import tensor, float32, long
 from torch.distributions.categorical import Categorical
 from torch.nn import Module, Sequential, Linear, ReLU, CrossEntropyLoss, Softmax
@@ -88,7 +89,9 @@ def filter_batch(batch, percentile):
 
 
 if __name__ == "__main__":
-    env = DiscreteOneHotWrapper(make("FrozenLake-v0"))
+    env = FrozenLakeEnv(is_slippery=False)
+    env = TimeLimit(env, max_episode_steps=100)
+    env = DiscreteOneHotWrapper(env)
     # env = Monitor(env, directory="mon", force=True)
     obs_size = env.observation_space.shape[0]
     n_actions = env.action_space.n
@@ -97,7 +100,7 @@ if __name__ == "__main__":
     objective = CrossEntropyLoss()
     optimizer = Adam(params=net.parameters(), lr=0.001)
 
-    with SummaryWriter(comment="-frozenlake-tweaked") as writer:
+    with SummaryWriter(comment="-frozenlake-nonslippery") as writer:
 
         full_batch = []
         for iter_no, batch in enumerate(iterate_batches(env, net, BATCH_SIZE)):
@@ -111,7 +114,8 @@ if __name__ == "__main__":
             loss_v = objective(action_scores_v, acts_v)
             loss_v.backward()
             optimizer.step()
-            print(f"{iter_no:d}: loss={loss_v.item():.3f}, reward_mean={reward_m:.1f}, reward_bound={reward_b:.1f}")
+            print(f"{iter_no:d}: loss={loss_v.item():.3f}, reward_mean={reward_m:.1f},"
+                  f" reward_bound={reward_b:.1f}, batch={len(full_batch)}")
             writer.add_scalar("loss", loss_v.item(), iter_no)
             writer.add_scalar("reward_bound", reward_b, iter_no)
             writer.add_scalar("reward_mean", reward_m, iter_no)
