@@ -1,5 +1,6 @@
-from gym import ActionWrapper, make
 from random import random
+
+from gym import ActionWrapper, make
 
 
 class RandomActionWrapper(ActionWrapper):

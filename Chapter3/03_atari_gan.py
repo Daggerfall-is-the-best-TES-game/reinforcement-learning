@@ -1,17 +1,17 @@
+from argparse import ArgumentParser
+from random import choice
+
+import numpy as np
+import torch
+from cv2 import resize
 from gym import make, logger
 from gym.core import ObservationWrapper
 from gym.spaces import Box
-import numpy as np
-from cv2 import resize
-from random import choice
-import torch
 from torch import FloatTensor, device, ones, zeros
 from torch.nn import Module, BCELoss, Sequential, Conv2d, ConvTranspose2d, ReLU, BatchNorm2d, Sigmoid, Tanh
 from torch.optim import Adam
-from torchvision import utils as vutils
-from argparse import ArgumentParser
 from torch.utils.tensorboard import SummaryWriter
-
+from torchvision import utils as vutils
 
 log = logger
 log.set_level(log.INFO)
