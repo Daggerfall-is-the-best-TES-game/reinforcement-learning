@@ -100,6 +100,17 @@ class EpisodicLifeEnv(gym.Wrapper):
         return obs
 
 
+class ImageToPyTorch(gym.ObservationWrapper):
+    def __init__(self, env):
+        super(ImageToPyTorch, self).__init__(env)
+        old_shape = self.observation_space.shape
+        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(old_shape[-1], old_shape[0], old_shape[1]),
+                                                dtype=np.float32)
+
+    def observation(self, observation):
+        return np.moveaxis(observation, 2, 0)
+
+
 class MaxAndSkipEnv(gym.Wrapper):
     def __init__(self, env, skip=4):
         """Return only every `skip`-th frame"""
@@ -287,6 +298,8 @@ def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, 
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
     env = WarpFrame(env)
+    env = MaxAndSkipEnv(env)
+    env = ImageToPyTorch(env)
     if scale:
         env = ScaledFloatFrame(env)
     if clip_rewards:

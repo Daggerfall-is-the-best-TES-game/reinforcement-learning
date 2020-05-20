@@ -4,8 +4,10 @@
       <w>conv</w>
       <w>deconvolves</w>
       <w>discr</w>
+      <w>dones</w>
       <w>gener</w>
       <w>probs</w>
+      <w>vals</w>
       <w>vutils</w>
     </words>
   </dictionary>
