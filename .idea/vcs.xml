@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Deep-Reinforcement-Learning-Hands-On" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Deep-Reinforcement-Learning-Hands-On-Second-Edition" vcs="Git" />
   </component>
 </project>

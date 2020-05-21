@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from gym import make
 from numpy.random import random
-from torch import tensor, save
+from torch import tensor, save, no_grad
 from torch.nn import MSELoss
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
@@ -24,9 +24,9 @@ REPLAY_SIZE = 10000
 REPLAY_START_SIZE = 10000
 LEARNING_RATE = 1e-4
 SYNC_TARGET_FRAMES = 1000
-EPSILON_DECAY_LAST_FRAME = 10 ** 5
+EPSILON_DECAY_LAST_FRAME = 150000
 EPSILON_START = 1.0
-EPSILON_FINAL = 0.02
+EPSILON_FINAL = 0.01
 
 Experience = namedtuple("Experience", field_names="state action reward done new_state")
 
@@ -58,6 +58,7 @@ class Agent:
         self.state = self.env.reset()
         self.total_reward = 0.0
 
+    @no_grad
     def play_step(self, net, epsilon=0.0, device="cuda"):
         done_reward = None
         if random() < epsilon:
@@ -82,9 +83,10 @@ class Agent:
         cuda_tensor = partial(tensor, device=device)
         states, actions, rewards, dones, next_states = map(cuda_tensor, batch)
         state_action_values = net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
-        next_state_values = tgt_net(next_states).max(1)[0]
-        next_state_values[dones] = 0.0
-        next_state_values = next_state_values.detach()
+        with no_grad():
+            next_state_values = tgt_net(next_states).max(1)[0]
+            next_state_values[dones] = 0.0
+            next_state_values = next_state_values.detach()
         expected_state_action_values = next_state_values * GAMMA + rewards
         return MSELoss()(state_action_values, expected_state_action_values)
 
