@@ -2,7 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Deep-Reinforcement-Learning-Hands-On" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Deep-Reinforcement-Learning-Hands-On-Second-Edition" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/ptan" vcs="Git" />
   </component>
 </project>
