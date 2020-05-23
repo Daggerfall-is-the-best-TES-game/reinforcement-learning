@@ -2,11 +2,15 @@
   <dictionary name="David">
     <words>
       <w>conv</w>
+      <w>cuda</w>
       <w>deconvolves</w>
       <w>discr</w>
       <w>dones</w>
+      <w>frameskip</w>
       <w>gener</w>
+      <w>hyperparams</w>
       <w>probs</w>
+      <w>tensorboard</w>
       <w>vals</w>
       <w>vutils</w>
     </words>
