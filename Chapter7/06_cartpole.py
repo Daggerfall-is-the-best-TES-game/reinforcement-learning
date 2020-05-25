@@ -1,12 +1,11 @@
 from gym import make
+from ptan.actions import ArgmaxActionSelector, EpsilonGreedyActionSelector
+from ptan.agent import TargetNet, DQNAgent
+from ptan.experience import ExperienceSourceFirstLast, ExperienceReplayBuffer
 from torch import no_grad, tensor
 from torch.nn import Module, Sequential, ReLU, Linear
 from torch.nn.functional import mse_loss
 from torch.optim import Adam
-
-from ptan.ptan.actions import ArgmaxActionSelector, EpsilonGreedyActionSelector
-from ptan.ptan.agent import TargetNet, DQNAgent
-from ptan.ptan.experience import ExperienceSourceFirstLast, ExperienceReplayBuffer
 
 HIDDEN_SIZE = 128
 BATCH_SIZE = 16

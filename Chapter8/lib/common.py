@@ -8,13 +8,11 @@ import numpy as np
 from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, OutputHandler
 from ignite.engine import Engine
 from ignite.metrics import RunningAverage
-from numpy import array
+from ptan.actions import EpsilonGreedyActionSelector
+from ptan.experience import ExperienceFirstLast, ExperienceReplayBuffer
+from ptan.ignite import EndOfEpisodeHandler, EpisodeFPSHandler, EpisodeEvents, PeriodicEvents, PeriodEvents
 from torch import tensor, no_grad
 from torch.nn import MSELoss
-
-from ptan.ptan.actions import EpsilonGreedyActionSelector
-from ptan.ptan.experience import ExperienceFirstLast, ExperienceReplayBuffer
-from ptan.ptan.ignite import EndOfEpisodeHandler, EpisodeFPSHandler, EpisodeEvents, PeriodicEvents, PeriodEvents
 
 HYPERPARAMS = {"pong": SimpleNamespace(env_name="PongNoFrameskip-v4",
                                        stop_reward=18.0,
@@ -31,16 +29,25 @@ HYPERPARAMS = {"pong": SimpleNamespace(env_name="PongNoFrameskip-v4",
 
 
 def unpack_batch(batch: List[ExperienceFirstLast]):
-    states, actions, rewards, done_masks, last_states = \
-        map(list, zip(*((state, action, reward, last_state is None, state if last_state is None else last_state)
-                        for state, action, reward, last_state in batch)))
-    entries = [states, actions, rewards, done_masks, last_states]
-    types = [None, None, np.float32, np.bool, None]
-    should_copy = [False, True, True, True, False]
-    return tuple(map(array, entries, types, should_copy))
+    states, actions, rewards, dones, last_states = [], [], [], [], []
+    for exp in batch:
+        state = np.array(exp.state)
+        states.append(state)
+        actions.append(exp.action)
+        rewards.append(exp.reward)
+        dones.append(exp.last_state is None)
+        if exp.last_state is None:
+            lstate = state  # the result will be masked anyway
+        else:
+            lstate = np.array(exp.last_state)
+        last_states.append(lstate)
+    return np.array(states, copy=False), np.array(actions), \
+           np.array(rewards, dtype=np.float32), \
+           np.array(dones, dtype=np.bool), \
+           np.array(last_states, copy=False)
 
 
-def calc_loss_dqn(self, batch, net, tgt_net, gamma, device="cuda"):
+def calc_loss_dqn(batch, net, tgt_net, gamma, device="cuda"):
     cuda_tensor = partial(tensor, device=device)
     states, actions, rewards, dones, next_states = map(cuda_tensor, unpack_batch(batch))
     state_action_values = net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
@@ -90,7 +97,7 @@ def setup_ignite(engine: Engine, params: SimpleNamespace, exp_source, run_name: 
               f" episodes and {trainer.state.iteration} iterations!")
         trainer.should_terminate = True
 
-    now = datetime.now().isoformat(timespec="minutes")
+    now = datetime.now().isoformat(timespec="minutes").replace(":", "-")
     logdir = f"runs/{now}-{params.run_name}-{run_name}"
     tb = TensorboardLogger(log_dir=logdir)
     run_avg = RunningAverage(output_transform=lambda v: v["loss"])
