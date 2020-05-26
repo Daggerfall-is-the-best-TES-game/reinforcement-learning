@@ -59,6 +59,16 @@ def calc_loss_dqn(batch, net, tgt_net, gamma, device="cuda"):
     return MSELoss()(state_action_values, expected_state_action_values)
 
 
+def calc_values_of_states(states, net, device="cuda"):
+    mean_vals = []
+    for batch in np.array_split(states, 64):
+        states_v = tensor(batch, device=device)
+        action_values_v = net(states_v)
+        best_action_values_v = action_values_v.max(1)[0]
+    mean_vals.append(best_action_values_v.mean().item())
+    return np.mean(mean_vals)
+
+
 class EpsilonTracker:
     def __init__(self, selector: EpsilonGreedyActionSelector, params: SimpleNamespace):
         self.selector = selector
