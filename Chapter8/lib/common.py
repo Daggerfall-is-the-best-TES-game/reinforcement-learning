@@ -9,7 +9,7 @@ from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, Output
 from ignite.engine import Engine
 from ignite.metrics import RunningAverage
 from ptan.actions import EpsilonGreedyActionSelector
-from ptan.experience import ExperienceFirstLast, ExperienceReplayBuffer
+from ptan.experience import ExperienceFirstLast
 from ptan.ignite import EndOfEpisodeHandler, EpisodeFPSHandler, EpisodeEvents, PeriodicEvents, PeriodEvents
 from torch import tensor, no_grad
 from torch.nn import MSELoss
@@ -80,7 +80,7 @@ class EpsilonTracker:
         self.selector.epsilon = max(self.params.epsilon_final, eps)
 
 
-def batch_generator(buffer: ExperienceReplayBuffer, initial: int, batch_size: int):
+def batch_generator(buffer, initial: int, batch_size: int):
     buffer.populate(initial)
     while True:
         buffer.populate(1)
