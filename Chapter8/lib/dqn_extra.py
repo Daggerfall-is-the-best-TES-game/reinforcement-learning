@@ -154,3 +154,39 @@ class NoisyDQN(Module):
             ((layer.weight ** 2).mean().sqrt() / (layer.sigma_weight ** 2).mean().sqrt()).item()
             for layer in self.noisy_layers
         ]
+
+
+class DuelingDQN(Module):
+    def __init__(self, input_shape, n_actions):
+        super().__init__()
+        self.conv = Sequential(
+            Conv2d(input_shape[0], 32, kernel_size=8, stride=4),
+            ReLU(),
+            Conv2d(32, 64, kernel_size=4, stride=2),
+            ReLU(),
+            Conv2d(64, 64, kernel_size=3, stride=1)
+        )
+        conv_out_size = self._get_conv_out(input_shape)
+        self.fc_adv = Sequential(
+            Linear(conv_out_size, 256),
+            ReLU(),
+            Linear(256, n_actions)
+        )
+        self.fc_val = Sequential(
+            Linear(conv_out_size, 256),
+            ReLU(),
+            Linear(256, 1)
+        )
+
+    def _get_conv_out(self, shape):
+        o = self.conv(zeros(1, *shape))  # 1 is the batch size
+        return prod(o.size())
+
+    def forward(self, x):
+        adv, val = self.adv_val(x)
+        return val + (adv - adv.mean(dim=1, keepdim=True))
+
+    def adv_val(self, x):
+        fx = x.float() / 256
+        conv_out = self.conv(fx).flatten(start_dim=1)
+        return self.fc_adv(conv_out), self.fc_val(conv_out)
