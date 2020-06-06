@@ -1,20 +1,11 @@
 <component name="ProjectDictionaryState">
-  <dictionary name="David">
+  <dictionary name="david">
     <words>
-      <w>conv</w>
-      <w>cuda</w>
-      <w>deconvolves</w>
-      <w>discr</w>
+      <w>distr</w>
       <w>dones</w>
-      <w>frameskip</w>
-      <w>gener</w>
-      <w>hyperparams</w>
-      <w>prio</w>
-      <w>prios</w>
-      <w>probs</w>
-      <w>tensorboard</w>
+      <w>proj</w>
+      <w>qvals</w>
       <w>vals</w>
-      <w>vutils</w>
     </words>
   </dictionary>
 </component>
