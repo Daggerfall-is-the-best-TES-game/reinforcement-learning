@@ -14,6 +14,7 @@ from ptan.ignite import EndOfEpisodeHandler, EpisodeFPSHandler, EpisodeEvents, P
 from torch import tensor, no_grad
 from torch.nn import MSELoss
 
+SEED = 123
 HYPERPARAMS = {"pong": SimpleNamespace(env_name="PongNoFrameskip-v4",
                                        stop_reward=18.0,
                                        run_name="pong",

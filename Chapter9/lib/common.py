@@ -14,6 +14,7 @@ from ptan.ignite import EndOfEpisodeHandler, EpisodeFPSHandler, EpisodeEvents, P
 from torch import tensor, no_grad
 from torch.nn import MSELoss
 
+SEED = 123
 HYPERPARAMS = {"pong": SimpleNamespace(env_name="PongNoFrameskip-v4",
                                        stop_reward=18.0,
                                        run_name="pong",
@@ -75,7 +76,7 @@ class EpsilonTracker:
         self.params = params
         self.frame(0)
 
-    def frame(self, frame_idx: int):
+    def frame(self, frame_idx):
         eps = self.params.epsilon_start - frame_idx / self.params.epsilon_frames
         self.selector.epsilon = max(self.params.epsilon_final, eps)
 
