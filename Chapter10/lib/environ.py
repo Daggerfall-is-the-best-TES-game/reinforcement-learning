@@ -120,14 +120,14 @@ class State1D(State):
         return res
 
 
-class StockEnv(Env):
+class StocksEnv(Env):
     metadata = {"render.modes": ["human"]}
     spec = EnvSpec("StocksEnv-v0")
 
     @classmethod
     def from_dir(cls, data_dir, **kwargs):
         prices = {file: data.load_relative(file) for file in data.price_files(data_dir)}
-        return StockEnv(prices, **kwargs)
+        return StocksEnv(prices, **kwargs)
 
     def __init__(self, prices, bars_count=DEFAULT_BARS_COUNT, commission=DEFAULT_COMMISSION_PERC,
                  reset_on_close=True, conv_1d=False, random_ofs_on_reset=True, reward_on_close=False, volumes=False):
