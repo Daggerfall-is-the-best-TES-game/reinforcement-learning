@@ -1,4 +1,4 @@
-import numpy as np
+from math import prod
 
 from torch import zeros
 from torch.nn import Module, Sequential, Conv2d, ReLU, Linear
@@ -25,7 +25,7 @@ class DQN(Module):
 
     def _get_conv_out(self, shape):
         o = self.conv(zeros(1, *shape))  # 1 is the batch size
-        return np.prod(o.size())
+        return prod(o.size())
 
     def forward(self, x):
         fx = x.float() / 256

@@ -7,60 +7,10 @@ from torch import full, zeros, Tensor
 from torch.nn import Linear, Parameter, Module, Sequential, Conv2d, ReLU, Softmax
 from torch.nn.functional import linear
 
-BETA_START = 0.4
-BETA_FRAMES = 100000
 N_ATOMS = 51
 Vmin = -10
 Vmax = 10
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-
-
-class PrioReplayBuffer:
-    def __init__(self, exp_source, buffer_size, prob_alpha=0.6):
-        self.exp_source_iter = iter(exp_source)
-        self.prob_alpha = prob_alpha
-        self.capacity = buffer_size
-        self.pos = 0
-        self.buffer = []
-        self.priorities = np.zeros((buffer_size,), dtype=np.float32)
-        self.beta = BETA_START
-
-    def update_beta(self, idx):
-        v = BETA_START + idx * (1.0 - BETA_START) / BETA_FRAMES
-        self.beta = min(1.0, v)
-        return self.beta
-
-    def __len__(self):
-        return len(self.buffer)
-
-    def populate(self, count):
-        max_prio = self.priorities.max() if self.buffer else 1.0
-        for _ in range(count):
-            sample = next(self.exp_source_iter)
-            if len(self.buffer) < self.capacity:
-                self.buffer.append(sample)
-            else:
-                self.buffer[self.pos] = sample
-            self.priorities[self.pos] = max_prio
-            self.pos = (self.pos + 1) % self.capacity
-
-    def sample(self, batch_size):
-        if len(self.buffer) == self.capacity:
-            prios = self.priorities
-        else:
-            prios = self.priorities[:self.pos]
-        probs = prios ** self.prob_alpha
-        probs /= probs.sum()
-        indices = np.random.choice(len(self.buffer), batch_size, p=probs)
-        samples = [self.buffer[idx] for idx in indices]
-        total = len(self.buffer)
-        weights = (total * probs[indices]) ** (-self.beta)
-        weights /= weights.max()
-        return samples, indices, np.array(weights, dtype=np.float32)
-
-    def update_priorities(self, batch_indices, batch_priorities):
-        for idx, prio in zip(batch_indices, batch_priorities):
-            self.priorities[idx] = prio
 
 
 class NoisyLinear(Linear):
@@ -185,7 +135,7 @@ class DuelingDQN(Module):
 
     def _get_conv_out(self, shape):
         o = self.conv(zeros(1, *shape))  # 1 is the batch size
-        return prod(o.size())
+        return int(prod(o.size()))
 
     def forward(self, x):
         adv, val = self.adv_val(x)
@@ -310,7 +260,7 @@ class RainbowDQN(Module):
 
     def _get_conv_out(self, shape):
         o = self.conv(zeros(1, *shape))  # 1 is the batch size
-        return prod(o.size())
+        return int(prod(o.size()))
 
     def forward(self, x):
         adv, val = self.adv_val(x)
