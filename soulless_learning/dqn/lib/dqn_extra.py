@@ -244,18 +244,23 @@ class RainbowDQN(Module):
             ReLU(),
             Conv2d(32, 64, kernel_size=4, stride=2),
             ReLU(),
-            Conv2d(64, 64, kernel_size=3, stride=1)
+            Conv2d(64, 64, kernel_size=4, stride=2),
+            ReLU(),
+            Conv2d(64, 128, kernel_size=3, stride=1),
+            ReLU(),
+            Conv2d(128, 128, kernel_size=3, stride=1),
+            ReLU()
         )
         conv_out_size = self._get_conv_out(input_shape)
         self.fc_adv = Sequential(
-            NoisyLinear(conv_out_size, 256),
+            NoisyLinear(conv_out_size, 1024),
             ReLU(),
-            NoisyLinear(256, n_actions)
+            NoisyLinear(1024, n_actions)
         )
         self.fc_val = Sequential(
-            Linear(conv_out_size, 256),
+            Linear(conv_out_size, 1024),
             ReLU(),
-            Linear(256, 1)
+            Linear(1024, 1)
         )
 
     def _get_conv_out(self, shape):

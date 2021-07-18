@@ -42,6 +42,8 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument("--cuda", default=True, action="store_true", help="Enable cuda")
+    parser.add_argument("--initial", type=int, help="the iteration the last checkpoint left off at")
+    parser.add_argument("--start", action="store_true", help="true if new run, false is resume from checkpoint")
     args = parser.parse_args()
     device = device("cuda" if args.cuda else "cpu")
 
@@ -71,4 +73,5 @@ if __name__ == "__main__":
 
     engine = Engine(process_batch)
     common.setup_ignite(engine, params, exp_source, NAME, net, optimizer, buffer, tgt_net)
-    engine.run(common.batch_generator(buffer, params.replay_initial, params.batch_size), max_epochs=100000, epoch_length=1000)
+    engine.run(common.batch_generator(buffer, args.initial, params.batch_size, start=args.start), max_epochs=100000,
+               epoch_length=1000)

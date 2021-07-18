@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta, datetime
 from functools import partial
 from pathlib import Path
@@ -5,8 +6,8 @@ from types import SimpleNamespace
 from typing import List, Iterable
 from warnings import simplefilter
 
+import joblib
 import numpy as np
-import torch
 from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, OutputHandler
 from ignite.engine import Engine, Events
 from ignite.handlers import DiskSaver, Checkpoint
@@ -35,8 +36,8 @@ HYPERPARAMS = {"pong": SimpleNamespace(env_name="PongNoFrameskip-v4",
                "soulless": SimpleNamespace(env_name="soulless-v0",
                                            stop_reward=10000.0,
                                            run_name="soulless",
-                                           replay_size=500000,
-                                           replay_initial=200000,
+                                           replay_size=100000,
+                                           replay_initial=50000,
                                            target_net_sync=10000,
                                            epsilon_frames=10 ** 6,
                                            epsilon_start=1.0,
@@ -100,6 +101,7 @@ class EpsilonTracker:
 
 
 class StatePrioReplayBuffer(PrioritizedReplayBuffer):
+    """A version of PrioritizedReplayBuffer that can interface with ignite checkpointing via the state_dict methods"""
     def state_dict(self):
         # generators must be excluded from the state_dict or it won't be serializable
         dictionary = self.__dict__.copy()
@@ -114,9 +116,17 @@ class StatePrioReplayBuffer(PrioritizedReplayBuffer):
         self.__dict__["experience_source_iter"] = exp_source
 
 
+class LightDiskSaver(DiskSaver):
+    """a version of DiskSaver that uses joblib instead of pickle for serialization to save memory usage"""
 
-def batch_generator(buffer, initial: int, batch_size: int):
-    buffer.populate(initial)
+    def __call__(self, checkpoint, filename, metadata=None):
+        path = os.path.join(self.dirname, filename)
+        joblib.dump(checkpoint, path)
+
+
+def batch_generator(buffer, initial: int, batch_size: int, start=False):
+    if start:
+        buffer.populate(initial)
     idx = initial
 
     while True:
@@ -137,14 +147,14 @@ def setup_ignite(engine: Engine, params: SimpleNamespace, exp_source, run_name: 
 
     objects_to_checkpoint = {'model': model, 'optimizer': optimizer, 'trainer': engine, "buffer": buffer, "target_net": target_net}
     checkpoint_dir = Path("models")
-    saver = DiskSaver(str(checkpoint_dir), create_dir=True, require_empty=False)
+    saver = LightDiskSaver(str(checkpoint_dir), create_dir=True, require_empty=False)
     handler = Checkpoint(objects_to_checkpoint, saver, n_saved=1)
-    engine.add_event_handler(Events.ITERATION_COMPLETED(every=1000), handler)
+    engine.add_event_handler(Events.ITERATION_COMPLETED(every=100000), handler)
 
 
     checkpoints_paths = list(checkpoint_dir.iterdir())
     if checkpoints_paths:
-        checkpoint = torch.load(checkpoints_paths[-1])
+        checkpoint = joblib.load(checkpoints_paths[-1])
         print(f"Loading checkpoint {checkpoints_paths[-1].name}")
         Checkpoint.load_objects(to_load=objects_to_checkpoint, checkpoint=checkpoint)
 

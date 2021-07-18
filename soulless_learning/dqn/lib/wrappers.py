@@ -84,7 +84,7 @@ class SkipEnv(gym.Wrapper):
 class ProcessFrame84(gym.ObservationWrapper):
     def __init__(self, env=None):
         super(ProcessFrame84, self).__init__(env)
-        self.observation_space = spaces.Box(low=0, high=255, shape=(150, 150, 1), dtype=np.uint8)
+        self.observation_space = spaces.Box(low=0, high=255, shape=(256, 256, 1), dtype=np.uint8)
 
     def observation(self, obs):
         return ProcessFrame84.process(obs)
@@ -98,8 +98,8 @@ class ProcessFrame84(gym.ObservationWrapper):
         else:
             img = frame.astype(np.float32)
         img = img[:, :, 0] * 0.299 + img[:, :, 1] * 0.587 + img[:, :, 2] * 0.114
-        resized_screen = cv2.resize(img, (150, 150), interpolation=cv2.INTER_AREA)
-        x_t = np.reshape(resized_screen, [150, 150, 1])
+        resized_screen = cv2.resize(img, (256, 256), interpolation=cv2.INTER_AREA)
+        x_t = np.reshape(resized_screen, [256, 256, 1])
         return x_t.astype(np.uint8)
 
 
