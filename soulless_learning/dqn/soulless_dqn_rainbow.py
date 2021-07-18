@@ -14,6 +14,8 @@ from soulless_learning.dqn.lib import common, dqn_extra, wrappers
 NAME = "soulless_rainbow"
 N_STEPS = 4
 PRIO_REPLAY_ALPHA = 0.6
+BETA_START = 0.4
+BETA_FRAMES = 1000000
 
 
 def calc_loss_double_dqn(batch, batch_weights, net, tgt_net, gamma, t_device, double=True):
@@ -42,7 +44,6 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument("--cuda", default=True, action="store_true", help="Enable cuda")
-    parser.add_argument("--initial", type=int, help="the iteration the last checkpoint left off at")
     parser.add_argument("--start", action="store_true", help="true if new run, false is resume from checkpoint")
     args = parser.parse_args()
     device = device("cuda" if args.cuda else "cpu")
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     selector = ArgmaxActionSelector()
     agent = DQNAgent(net, selector, device=device)
     exp_source = ExperienceSourceFirstLast(env, agent, gamma=params.gamma, steps_count=N_STEPS)
-    buffer = common.StatePrioReplayBuffer(exp_source, params.replay_size, PRIO_REPLAY_ALPHA)
+    buffer = common.StatePrioReplayBuffer(exp_source, params.replay_size, PRIO_REPLAY_ALPHA, BETA_START, BETA_FRAMES)
     optimizer = RMSprop(net.parameters(), lr=params.learning_rate, momentum=0.95, eps=0.01)
 
 
@@ -73,5 +74,5 @@ if __name__ == "__main__":
 
     engine = Engine(process_batch)
     common.setup_ignite(engine, params, exp_source, NAME, net, optimizer, buffer, tgt_net)
-    engine.run(common.batch_generator(buffer, args.initial, params.batch_size, start=args.start), max_epochs=100000,
-               epoch_length=1000)
+    engine.run(common.batch_generator(buffer, params.replay_initial, params.batch_size, start=args.start),
+               max_epochs=100000, epoch_length=1000)

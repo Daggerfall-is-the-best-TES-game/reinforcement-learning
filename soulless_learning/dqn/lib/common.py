@@ -19,8 +19,6 @@ from torch import tensor, no_grad
 from torch.nn import MSELoss
 
 SEED = 123
-BETA_START = 0.4
-BETA_FRAMES = 1000000
 HYPERPARAMS = {"pong": SimpleNamespace(env_name="PongNoFrameskip-v4",
                                        stop_reward=18.0,
                                        run_name="pong",
@@ -102,6 +100,13 @@ class EpsilonTracker:
 
 class StatePrioReplayBuffer(PrioritizedReplayBuffer):
     """A version of PrioritizedReplayBuffer that can interface with ignite checkpointing via the state_dict methods"""
+
+    def __init__(self, experience_source, buffer_size, alpha, beta_start, beta_frames):
+        super().__init__(experience_source, buffer_size, alpha)
+        self.beta_start = beta_start
+        self.beta = beta_start
+        self.beta_frames = beta_frames
+
     def state_dict(self):
         # generators must be excluded from the state_dict or it won't be serializable
         dictionary = self.__dict__.copy()
@@ -115,10 +120,17 @@ class StatePrioReplayBuffer(PrioritizedReplayBuffer):
         # must be added back for the replay buffer to function
         self.__dict__["experience_source_iter"] = exp_source
 
+    def populate(self, samples):
+        super().populate(samples)
+        self.beta += (1.0 - self.beta_start) / self.beta_frames
+        self.beta = min(1.0, self.beta)
+
+    def sample(self, batch_size, beta):
+        return super().sample(batch_size, self.beta)
+
 
 class LightDiskSaver(DiskSaver):
     """a version of DiskSaver that uses joblib instead of pickle for serialization to save memory usage"""
-
     def __call__(self, checkpoint, filename, metadata=None):
         path = os.path.join(self.dirname, filename)
         joblib.dump(checkpoint, path)
@@ -127,14 +139,9 @@ class LightDiskSaver(DiskSaver):
 def batch_generator(buffer, initial: int, batch_size: int, start=False):
     if start:
         buffer.populate(initial)
-    idx = initial
-
     while True:
         buffer.populate(1)
-        idx += 1
-        beta = BETA_START + idx / BETA_FRAMES * (1.0 - BETA_START)
-        beta = min(1.0, beta)
-        yield buffer.sample(batch_size, beta)
+        yield buffer.sample(batch_size, None)
 
 
 def setup_ignite(engine: Engine, params: SimpleNamespace, exp_source, run_name: str, model, optimizer, buffer, target_net,
