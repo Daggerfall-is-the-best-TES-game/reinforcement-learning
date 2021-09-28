@@ -6,6 +6,7 @@ import ptan
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn import ReLU, Sequential, Conv2d
 
 from . import dqn_extra
 
@@ -331,11 +332,11 @@ class AtariNoisyNetsPPO(nn.Module):
 
         self.conv = nn.Sequential(
             nn.Conv2d(input_shape[0], 32,
-                      kernel_size=8, stride=4),
+                      kernel_size=12, stride=6),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.Conv2d(32, 64, kernel_size=6, stride=4),
             nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.Conv2d(64, 64, kernel_size=4, stride=3),
             nn.ReLU()
         )
 
@@ -377,21 +378,24 @@ class AtariDistill(nn.Module):
     def __init__(self, input_shape):
         super(AtariDistill, self).__init__()
 
-        self.conv = nn.Sequential(
-            nn.Conv2d(input_shape[0], 32,
-                      kernel_size=8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.ReLU()
+        self.conv = Sequential(
+            Conv2d(input_shape[0], 32, kernel_size=8, stride=4),
+            ReLU(),
+            Conv2d(32, 64, kernel_size=4, stride=2),
+            ReLU(),
+            Conv2d(64, 64, kernel_size=4, stride=2),
+            ReLU(),
+            Conv2d(64, 128, kernel_size=3, stride=1),
+            ReLU(),
+            Conv2d(128, 128, kernel_size=3, stride=1),
+            ReLU()
         )
 
         conv_out_size = self._get_conv_out(input_shape)
         self.ff = nn.Sequential(
-            nn.Linear(conv_out_size, 256),
+            nn.Linear(conv_out_size, 1024),
             nn.ReLU(),
-            nn.Linear(256, 1)
+            nn.Linear(1024, 1)
         )
 
     def _get_conv_out(self, shape):
@@ -411,31 +415,34 @@ class AtariDistillPPO(nn.Module):
     def __init__(self, input_shape, n_actions):
         super(AtariDistillPPO, self).__init__()
 
-        self.conv = nn.Sequential(
-            nn.Conv2d(input_shape[0], 32,
-                      kernel_size=8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.ReLU()
+        self.conv = Sequential(
+            Conv2d(input_shape[0], 32, kernel_size=8, stride=4),
+            ReLU(),
+            Conv2d(32, 64, kernel_size=4, stride=2),
+            ReLU(),
+            Conv2d(64, 64, kernel_size=4, stride=2),
+            ReLU(),
+            Conv2d(64, 128, kernel_size=3, stride=1),
+            ReLU(),
+            Conv2d(128, 128, kernel_size=3, stride=1),
+            ReLU()
         )
 
         conv_out_size = self._get_conv_out(input_shape)
         self.actor = nn.Sequential(
-            nn.Linear(conv_out_size, 256),
+            nn.Linear(conv_out_size, 1024),
             nn.ReLU(),
-            nn.Linear(256, n_actions)
+            nn.Linear(1024, n_actions)
         )
         self.critic_ext = nn.Sequential(
-            nn.Linear(conv_out_size, 256),
+            nn.Linear(conv_out_size, 1024),
             nn.ReLU(),
-            nn.Linear(256, 1)
+            nn.Linear(1024, 1)
         )
         self.critic_int = nn.Sequential(
-            nn.Linear(conv_out_size, 256),
+            nn.Linear(conv_out_size, 1024),
             nn.ReLU(),
-            nn.Linear(256, 1)
+            nn.Linear(1024, 1)
         )
 
     def _get_conv_out(self, shape):

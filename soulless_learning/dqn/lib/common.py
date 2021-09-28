@@ -152,11 +152,12 @@ def setup_ignite(engine: Engine, params: SimpleNamespace, exp_source, run_name: 
     handler.attach(engine)
     EpisodeFPSHandler().attach(engine)
 
-    objects_to_checkpoint = {'model': model, 'optimizer': optimizer, 'trainer': engine, "buffer": buffer, "target_net": target_net}
-    checkpoint_dir = Path("models")
+    objects_to_checkpoint = {'model': model, 'optimizer': optimizer, 'trainer': engine, "buffer": buffer,
+                             "target_net": target_net}
+    checkpoint_dir = Path("models backup")
     saver = LightDiskSaver(str(checkpoint_dir), create_dir=True, require_empty=False)
     handler = Checkpoint(objects_to_checkpoint, saver, n_saved=1)
-    engine.add_event_handler(Events.ITERATION_COMPLETED(every=100000), handler)
+    engine.add_event_handler(Events.ITERATION_COMPLETED(every=30000), handler)
 
 
     checkpoints_paths = list(checkpoint_dir.iterdir())

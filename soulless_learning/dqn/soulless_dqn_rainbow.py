@@ -18,7 +18,7 @@ BETA_START = 0.4
 BETA_FRAMES = 1000000
 
 
-def calc_loss_double_dqn(batch, batch_weights, net, tgt_net, gamma, t_device, double=True):
+def calc_loss_rainbow_dqn(batch, batch_weights, net, tgt_net, gamma, t_device, double=True):
     cuda_tensor = partial(tensor, device=t_device)
     states, actions, rewards, dones, next_states = map(cuda_tensor, common.unpack_batch(batch))
     batch_weights_v = tensor(batch_weights, device=t_device)
@@ -63,7 +63,8 @@ if __name__ == "__main__":
     def process_batch(engine, batch):
         batch, batch_indices, batch_weights = batch
         optimizer.zero_grad()
-        loss, prios = calc_loss_double_dqn(batch, batch_weights, net, tgt_net.target_model, gamma=params.gamma, t_device=device)
+        loss, prios = calc_loss_rainbow_dqn(batch, batch_weights, net, tgt_net.target_model, gamma=params.gamma,
+                                            t_device=device)
         loss.backward()
         optimizer.step()
         buffer.update_priorities(batch_indices, prios)
